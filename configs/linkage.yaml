@@ -1,0 +1,61 @@
+# Every constant used by run_pipeline.py. Nothing analytical is hard-coded in
+# src/, so a reader can see and change each choice in one place.
+
+run:
+  seed: 0
+  # Random pairs drawn to estimate chance agreement (u). Large enough that the
+  # estimate is stable to three decimal places; see docs/decision_log.md D-03.
+  u_samples: 60000
+
+# Exact-match rules the probabilistic model must beat. Chosen to span the
+# realistic range: too few fields and precision suffers, too many and every
+# extra field is another chance for a typo to break the match.
+baselines:
+  - [given_name, surname, date_of_birth]
+  - [surname, date_of_birth, postcode]
+  - [given_name, surname, date_of_birth, postcode]
+
+blocking:
+  # One pass per field that is (a) reasonably discriminating and (b) likely to
+  # survive corruption in a different set of records from the others. Passes
+  # are unioned, so a record missing or corrupting one key is still reachable
+  # through another.
+  passes:
+    - [postcode]
+    - [date_of_birth]
+    - [surname]
+  # Fields above, recorded separately: their u must be estimated on random
+  # pairs, not on blocked candidates, or their weights collapse.
+  key_fields: [postcode, date_of_birth, surname]
+
+comparison:
+  # Exact only. A date one day out is a different date; partial credit here
+  # lets different people accumulate evidence of being the same person.
+  exact: [date_of_birth, postcode, state, soc_sec_id]
+  # Tolerant of typos, which is the dominant corruption mode for these fields.
+  fuzzy: [given_name, surname, suburb, address_1]
+  # Jaro-Winkler above this counts as agreement. 0.90 admits ordinary typos
+  # and single-character transpositions while excluding most distinct names.
+  string_threshold: 0.90
+  # Near-unique in this dataset. Kept for profiling, dropped before the
+  # headline evaluation so the result is not a disguised exact-match on an ID.
+  identifier_field: soc_sec_id
+
+evaluation:
+  thresholds: [-10, -5, 0, 5, 10, 15, 20, 25, 30]
+  # Chosen where F1 peaks without the identifier. Not a universal value: the
+  # right threshold depends on the relative cost of a false versus a missed
+  # match, which depends on what the linked data is for.
+  operating_threshold: 5
+  review_bands:
+    - [5, 5]        # single threshold, no review
+    - [0, 10]
+    - [-5, 15]
+    - [-8, 20]
+  impact_thresholds: [0, 5, 10, 15, 20, 25]
+
+qa:
+  # From the linkage design: both files describe the same 5,000 people, so a
+  # healthy run matches nearly all of them. In production this comes from prior
+  # runs rather than from design.
+  expected_match_rate: 0.99
