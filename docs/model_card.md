@@ -59,25 +59,33 @@ unsupervised estimation step is visible rather than configured.
 
 **Process.** `run_pipeline.py` reproduces every figure. Labels evaluate only.
 
-**Headline, without the near-unique identifier:**
+**Headline, without the near-unique identifier**, at the operating threshold
+with one-to-one assignment (the pipeline's accept rule):
 
 | metric | value |
 |---|---|
-| precision | 0.9994 |
-| recall (end to end) | 0.9928 |
-| F1 | 0.9961 |
+| precision | 1.0000 |
+| recall (end to end) | 0.9948 |
+| F1 | 0.9974 |
 | best deterministic recall | 0.4962 |
+
+On the plain threshold sweep, without assignment, the best F1 is 0.9961 at
+threshold 10 (precision 0.9994, recall 0.9928), and the operating threshold
+scores 0.9870. The 105 duplicate accepts assignment removes are the difference.
 
 **Recall is reported end to end**, counting true pairs discarded by blocking as
 false negatives at every threshold.
 
-**Degradation.** Under injected corruption, precision holds (0.999 → 0.954
-across 0–40%) while recall falls (0.994 → 0.528). The binding constraint is
+**Degradation.** Under injected corruption, precision holds (0.9986 → 0.9595
+across 0–40%) while recall falls (0.9944 → 0.5312). The binding constraint is
 blocking, not the model.
 
-**Known defect.** `check_one_to_one` flags 98 left and 93 right records in
-multiple accepted matches at the operating threshold. One-to-one assignment is
-outstanding.
+**Defect found by QA, and fixed.** `check_one_to_one` flagged 98 left and 93
+right records in multiple accepted matches at the operating threshold — pairs
+scoring well individually while being jointly impossible. Greedy one-to-one
+assignment by descending score removed all 105 false accepts with no loss of
+recall: precision 0.9793 → 1.0000. See D-11. The assignment is greedy rather
+than optimal (Hungarian), which remains a simplification.
 
 ## Ethical considerations
 
@@ -100,5 +108,6 @@ error type rather than as a single optimised value.
 
 No hard negatives in the benchmark; conditional independence violated
 (correlations to 0.896); no domain preprocessing; binary comparison levels;
-missing values treated as disagreement; one-to-one assignment outstanding; no
-evaluation against an incumbent system. Full list in `limitations.md`.
+missing values treated as disagreement; one-to-one assignment greedy rather
+than optimal; no evaluation against an incumbent system. Full list in
+`limitations.md`.

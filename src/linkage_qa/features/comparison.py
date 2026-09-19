@@ -18,13 +18,9 @@ than a number inside a function.
 
 from __future__ import annotations
 
+import jellyfish
 import numpy as np
 import pandas as pd
-
-try:
-    import jellyfish
-except ImportError:  # pragma: no cover
-    jellyfish = None
 
 #: Default similarity above which two strings are treated as agreeing.
 #: 0.90 on Jaro-Winkler admits ordinary typos while excluding most different
@@ -80,8 +76,8 @@ def chance_agreement(left: pd.DataFrame, right: pd.DataFrame, *, exact_fields: l
     their agreement rate estimates u directly and is unaffected by blocking.
     """
     rng = np.random.default_rng(seed)
-    l = left.iloc[rng.integers(0, len(left), n_samples)].reset_index(drop=True)
-    r = right.iloc[rng.integers(0, len(right), n_samples)].reset_index(drop=True)
-    g, _ = compare(l, r, exact_fields=exact_fields, fuzzy_fields=fuzzy_fields,
-                   threshold=threshold)
+    sample_l = left.iloc[rng.integers(0, len(left), n_samples)].reset_index(drop=True)
+    sample_r = right.iloc[rng.integers(0, len(right), n_samples)].reset_index(drop=True)
+    g, _ = compare(sample_l, sample_r, exact_fields=exact_fields,
+                   fuzzy_fields=fuzzy_fields, threshold=threshold)
     return g.mean(axis=0)

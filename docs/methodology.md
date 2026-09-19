@@ -24,7 +24,7 @@ or does not, with no signal either way.
 
 **Multi-pass blocking, unioned.** One key fails wherever that field is
 corrupted; independent passes fail on different records. Measured rather than
-assumed: single keys retain 0.466 to 0.894 of true pairs, the union 0.995.
+assumed: single keys retain 0.665 to 0.894 of true pairs, the union 0.995.
 
 **Comparison by failure mode.** Tolerant for names, where typos dominate.
 Exact for dates and postcodes, where a one-character difference is a genuine
@@ -38,14 +38,11 @@ directly and is unaffected by blocking.
 which error to prefer, and the two errors are not comparable. Reported as
 counts so the trade-off is visible.
 
-**Own tenth percentile, no external benchmark.** Where a floor is needed it
-comes from the data's own distribution rather than an imported standard.
-
 ## Validation strategy
 
 Three kinds, because each catches what the others miss.
 
-1. **Unit tests on constructed cases** (20). Including EM parameter recovery:
+1. **Unit tests on constructed cases** (26). Including EM parameter recovery:
    generate from the model with known m, u and prior, check they come back.
    Also what each function must *not* do — blocking must not reach records
    missing the key, exact fields must reject near-misses.

@@ -15,5 +15,14 @@ dev = ["pytest>=7.4", "ruff>=0.5"]
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# `ruff check .` is clean on this rule set. It is not yet wired into
+# .github/workflows/tests.yml -- add `- run: ruff check .` before the pytest
+# step to enforce it.
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

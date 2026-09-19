@@ -2,8 +2,8 @@
 
 ## The benchmark is easy, and the headline number reflects that
 
-On FEBRL true pairs, 7.06 of 8 fields agree on average, and **no** non-matching
-pair agrees on 6 or more fields. There are no hard negatives: no siblings at one
+On FEBRL true pairs, 7.04 of 8 fields agree on average, and **no** non-matching
+pair — none of 106,422 — agrees on 6 or more fields. There are no hard negatives: no siblings at one
 address, no name-and-date-of-birth collisions, no families sharing surname and
 postcode. Real administrative data has all three. Accuracy near 0.99 is a
 property of this dataset, and the degradation curve in D-10 is the honest
