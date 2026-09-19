@@ -31,6 +31,7 @@ pipeline re-run:
 | extra corruption | blocking completeness | precision | recall |
 |---|---|---|---|
 | 0% | 0.995 | 0.9986 | 0.9944 |
+| 5% | 0.983 | 0.9986 | 0.9782 |
 | 10% | 0.955 | 0.9981 | 0.9382 |
 | 20% | 0.892 | 0.9838 | 0.8610 |
 | 30% | 0.772 | 0.9347 | 0.7334 |
@@ -45,12 +46,15 @@ England use nine blocking rules including Soundex, against three here.
 ## Four findings
 
 **Blocking sets the ceiling.** Union of three passes: 99.554% reduction, 99.5%
-of true pairs kept. Single keys lose 11–53%. The 25 pairs lost here cap recall
-before the model runs.
+of true pairs kept. Single keys lose 11–34% — date of birth 11%, postcode 16%,
+surname 34%. The 25 pairs lost here cap recall before the model runs.
 
 **Blocking breaks the u estimate.** A blocking-key field agrees within its
 blocks by construction. Surname's weight: 0.14 bits estimated on candidates,
-7.53 on random pairs. Non-key fields move under 5%.
+7.53 on random pairs. Non-key fields move under 5%, with one exception that is
+not a blocking effect: `soc_sec_id`'s chance agreement is estimated at exactly
+zero on the candidates, so its 19.80-bit weight comes from the numerical clip
+rather than from the data.
 
 **Clerical review has a floor.** 595 reviews (0.5% of pairs) cut errors from
 131 to 29. Beyond that, errors stop at 25 — review only sees proposed pairs.
@@ -64,7 +68,7 @@ threshold sweep would never have found this; the structural check did.
 
 ## Reasoning
 
-`docs/decision_log.md` — ten decisions, evidence, and what would reverse each.
+`docs/decision_log.md` — eleven decisions, evidence, and what would reverse each.
 `docs/limitations.md` — what this does not support.
 
 ## Limitations

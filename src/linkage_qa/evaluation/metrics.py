@@ -26,6 +26,20 @@ import numpy as np
 import pandas as pd
 
 
+def _f1(precision: float, recall: float) -> float:
+    """Harmonic mean, 0 when either term is 0 and NaN only when one is undefined.
+
+    ``precision`` is NaN when nothing was accepted, which is genuinely
+    undefined. A precision of exactly 0 is not: it is a real, terrible result,
+    and reporting it as NaN hides a threshold that accepts only false matches.
+    """
+    if np.isnan(precision) or np.isnan(recall):
+        return np.nan
+    if precision + recall == 0:
+        return 0.0
+    return 2 * precision * recall / (precision + recall)
+
+
 def threshold_sweep(scores: np.ndarray, is_match: np.ndarray, *, n_true_total: int,
                     thresholds=None) -> pd.DataFrame:
     """Confusion counts and rates at each threshold, with end-to-end recall.
@@ -56,7 +70,7 @@ def threshold_sweep(scores: np.ndarray, is_match: np.ndarray, *, n_true_total: i
             "of_which_lost_to_blocking": lost_to_blocking,
             "precision": precision,
             "recall_end_to_end": recall,
-            "f1": 2 * precision * recall / (precision + recall) if precision and recall else np.nan,
+            "f1": _f1(precision, recall),
         })
     return pd.DataFrame(rows)
 
@@ -108,9 +122,20 @@ def downstream_impact(scores: np.ndarray, is_match: np.ndarray, outcome: np.ndar
     the outcome -- when the people hardest to link are not like the people
     easiest to link. Where that holds, raising the threshold buys precision and
     pays for it in representativeness, and the study never sees the bill.
+
+    ``scores`` and ``is_match`` are indexed over every candidate pair, but
+    ``outcome`` is indexed over the *true* pairs only -- one entry per element of
+    ``np.where(is_match)[0]``, in that order -- because the cohort is the true
+    pairs and only they carry an outcome. The lengths are checked, since passing
+    a candidate-length array here silently misaligns every row.
     """
     thresholds = thresholds if thresholds is not None else np.arange(0, 31, 5)
     true_idx = np.where(is_match)[0]
+    if len(outcome) != len(true_idx):
+        raise ValueError(
+            f"outcome has {len(outcome)} entries but there are {len(true_idx)} true "
+            "pairs; outcome must be indexed over the true pairs, not over all candidates"
+        )
     true_n = len(true_idx)
     true_prev = float(outcome.mean())
 
@@ -148,10 +173,10 @@ def one_to_one_assignment(pairs: list[tuple], scores: np.ndarray) -> np.ndarray:
     taken_left, taken_right = set(), set()
     keep = np.zeros(len(pairs), dtype=bool)
     for i in order:
-        l, r = pairs[i]
-        if l in taken_left or r in taken_right:
+        left_id, right_id = pairs[i]
+        if left_id in taken_left or right_id in taken_right:
             continue
         keep[i] = True
-        taken_left.add(l)
-        taken_right.add(r)
+        taken_left.add(left_id)
+        taken_right.add(right_id)
     return keep

@@ -65,7 +65,8 @@ These are choices, made for reasons, not attempts to look different.
 - The demonstration that clerical review has a hard floor set by blocking, so
   buying more review capacity past a point buys nothing (D-08).
 - The comparison against deterministic baselines with the unique identifier
-  removed: 0.9904 recall against 0.416 (D-05).
+  removed: 0.9948 end-to-end recall against 0.4962 for the best exact-match
+  rule, at equal precision (D-05).
 
 ## How to describe this work
 

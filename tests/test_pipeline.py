@@ -7,10 +7,12 @@ import pytest
 
 from linkage_qa.blocking.strategies import block_on, evaluate_blocking, multi_pass
 from linkage_qa.evaluation.metrics import (
-    clerical_review_bands, downstream_impact, threshold_sweep,
+    clerical_review_bands, downstream_impact, one_to_one_assignment, threshold_sweep,
 )
 from linkage_qa.features.comparison import compare, jaro_winkler
-from linkage_qa.model.fellegi_sunter import dependence_check, fit_em
+from linkage_qa.model.fellegi_sunter import (
+    FellegiSunterModel, dependence_check, fit_em,
+)
 from linkage_qa.qa.framework import (
     check_field_agreement, check_match_rate, check_one_to_one,
     check_score_distribution, check_subgroup_match_rates,
@@ -84,6 +86,23 @@ def test_posterior_is_a_probability():
     fit = fit_em(g, list("abc"))
     p = fit.posterior(g)
     assert ((p >= 0) & (p <= 1)).all()
+
+
+def test_posterior_survives_an_overwhelming_score():
+    """2 ** w overflows past ~1024 bits, and inf / (1 + inf) is NaN."""
+    model = FellegiSunterModel(["a", "b"], m=np.array([1 - 1e-12, 1 - 1e-12]),
+                               u=np.array([1e-300, 1e-300]), lambda_=0.05)
+    gamma = np.ones((1, 2))
+    assert model.score(gamma)[0] > 1024          # the regime 2 ** w cannot reach
+    p = model.posterior(gamma)
+    assert np.isfinite(p).all() and p[0] == pytest.approx(1.0)
+
+
+def test_diagnostics_suspect_is_a_plain_bool():
+    """It is printed in the pipeline output, so numpy's repr leaks into docs."""
+    fit = fit_em((np.random.default_rng(6).random((500, 3)) < 0.3).astype(float),
+                 list("abc"))
+    assert type(fit.diagnostics()["suspect"]) is bool
 
 
 def test_dependence_check_finds_a_duplicated_field():
@@ -164,6 +183,22 @@ def test_review_band_cannot_beat_the_blocking_floor():
     assert out["irreducible_floor"].iloc[0] == 3
 
 
+def test_f1_is_zero_not_undefined_when_a_threshold_accepts_only_false_matches():
+    """Precision 0 is a result, not a missing value; NaN would hide it."""
+    swept = threshold_sweep(np.array([10.0, 10.0]), np.array([False, False]),
+                            n_true_total=2, thresholds=[0])
+    assert swept.iloc[0]["precision"] == 0.0
+    assert swept.iloc[0]["f1"] == 0.0
+
+
+def test_downstream_impact_rejects_a_misaligned_outcome():
+    """outcome is indexed over true pairs; a candidate-length array is a bug."""
+    scores = np.array([30.0, 1.0, 5.0])
+    is_match = np.array([True, False, True])
+    with pytest.raises(ValueError, match="indexed over the true pairs"):
+        downstream_impact(scores, is_match, np.zeros(3), thresholds=[0])
+
+
 def test_downstream_impact_detects_outcome_related_dropout():
     scores = np.concatenate([np.full(50, 30.0), np.full(50, 1.0)])
     is_match = np.ones(100, dtype=bool)
@@ -204,9 +239,6 @@ def test_field_agreement_flags_a_dead_field():
     out = check_field_agreement(g, ["live", "dead"], acc)
     assert bool(out[out.field == "dead"]["flag"].iloc[0])
     assert not bool(out[out.field == "live"]["flag"].iloc[0])
-
-
-from linkage_qa.evaluation.metrics import one_to_one_assignment
 
 
 def test_one_to_one_keeps_the_higher_scoring_partner():

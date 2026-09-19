@@ -113,7 +113,7 @@ class FellegiSunterModel:
             "fields_with_m_below_u": swapped,
             "min_m": float(self.m.min()),
             "match_prior": float(self.lambda_),
-            "suspect": bool(swapped) or self.m.min() < 0.5 or self.lambda_ > 0.3,
+            "suspect": bool(swapped or self.m.min() < 0.5 or self.lambda_ > 0.3),
         }
 
     def score(self, gamma: np.ndarray) -> np.ndarray:
@@ -121,10 +121,15 @@ class FellegiSunterModel:
         return gamma @ self.agreement_weight + (1 - gamma) @ self.disagreement_weight
 
     def posterior(self, gamma: np.ndarray) -> np.ndarray:
-        """P(match | comparison vector), using the fitted prior."""
-        w = self.score(gamma)
-        odds = (self.lambda_ / (1 - self.lambda_)) * np.exp2(w)
-        return odds / (1 + odds)
+        """P(match | comparison vector), using the fitted prior.
+
+        Computed on the log-odds scale. Taking ``2 ** w`` directly overflows to
+        infinity once the score passes about 1,024 bits, and ``inf / (1 + inf)``
+        is NaN -- the most confident matches would be the ones to come back
+        undefined.
+        """
+        log_odds = np.log(self.lambda_ / (1 - self.lambda_)) + self.score(gamma) * np.log(2)
+        return 1.0 / (1.0 + np.exp(-log_odds))
 
 
 def _clip(p: np.ndarray, eps: float = 1e-6) -> np.ndarray:
@@ -146,7 +151,6 @@ def fit_em(
     tol: float = 1e-8,
     init_m: float = 0.9,
     init_u: float = 0.1,
-    seed: int = 0,
 ) -> FellegiSunterModel:
     """Estimate m, u and the match prior by expectation-maximisation.
 
@@ -158,7 +162,8 @@ def fit_em(
     one where fields tend to agree. Starting symmetrically leaves the two
     classes exchangeable and the algorithm can converge to the mirror image,
     labelling matches as non-matches. The starting values are deliberately
-    crude so they cannot be mistaken for prior knowledge of the answer.
+    crude so they cannot be mistaken for prior knowledge of the answer. There is
+    no seed: initialisation is fixed, so the fit is deterministic in ``gamma``.
     """
     n, k = gamma.shape
     m = np.full(k, init_m)

@@ -43,9 +43,13 @@ comparison:
 
 evaluation:
   thresholds: [-10, -5, 0, 5, 10, 15, 20, 25, 30]
-  # Chosen where F1 peaks without the identifier. Not a universal value: the
-  # right threshold depends on the relative cost of a false versus a missed
-  # match, which depends on what the linked data is for.
+  # Chosen where F1 peaks *after* one-to-one assignment (D-11), which is how
+  # the pipeline accepts pairs: 1.0000 precision and 0.9948 recall, F1 0.9974.
+  # On the plain threshold sweep alone F1 would instead pick 10 (0.9961), and
+  # 5 scores 0.9870 there -- the 105 duplicate accepts assignment removes are
+  # exactly the difference. Not a universal value: the right threshold depends
+  # on the relative cost of a false versus a missed match, which depends on
+  # what the linked data is for.
   operating_threshold: 5
   review_bands:
     - [5, 5]        # single threshold, no review

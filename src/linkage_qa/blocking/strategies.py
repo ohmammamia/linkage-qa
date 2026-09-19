@@ -39,9 +39,9 @@ def block_on(left: pd.DataFrame, right: pd.DataFrame, cols: list[str]) -> set[tu
         a.assign(_k=_key(a, cols)).reset_index()
         .merge(b.assign(_k=_key(b, cols)).reset_index(), on="_k", suffixes=("_l", "_r"))
     )
-    lid, rid = m.columns[0], [c for c in m.columns if c.endswith("_r")][0]
-    left_col = [c for c in m.columns if c.endswith("_l")][0]
-    return set(zip(m[left_col], m[rid]))
+    left_col = next(c for c in m.columns if c.endswith("_l"))
+    right_col = next(c for c in m.columns if c.endswith("_r"))
+    return set(zip(m[left_col], m[right_col]))
 
 
 def multi_pass(left: pd.DataFrame, right: pd.DataFrame,

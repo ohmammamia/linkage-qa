@@ -129,8 +129,6 @@ def main(quick: bool = False) -> None:
     fitted = fit_em(gamma, fields)
     u_random = chance_agreement(left, right, exact_fields=ex, fuzzy_fields=fz,
                                 n_samples=cfg["run"]["u_samples"], seed=rng_seed)
-    model = FellegiSunterModel(fields, fitted.m, np.clip(u_random, 1e-6, 1),
-                               fitted.lambda_)
 
     print("EM diagnostics:", fitted.diagnostics())
     print(f"\nFitted match prior : {fitted.lambda_:.4f}")
@@ -146,7 +144,11 @@ def main(quick: bool = False) -> None:
         "is_blocking_key": [f in cfg["blocking"]["key_fields"] for f in fields],
     })
     print(comp.to_string(index=False))
-    print("\nBlocking keys only. Non-key fields move by under 5%.")
+    print("\nBlocking keys move from +65% (date of birth) to 54-fold (surname).")
+    print("Non-key fields move by under 5% --")
+    print("except soc_sec_id, whose blocked u is estimated at exactly zero, so its")
+    print("19.80-bit weight is set by the 1e-6 clip rather than by the data. That is")
+    print("a zero-cell artefact, not a blocking effect; see docs/decision_log.md D-03.")
 
     print("\n-- conditional independence (assumed, violated, reported) --")
     print(dependence_check(gamma, fields).head(5).to_string(index=False))
@@ -199,8 +201,11 @@ def main(quick: bool = False) -> None:
     t = cfg["evaluation"]["operating_threshold"]
     thresholded = scores >= t
     accepted = thresholded & one_to_one_assignment(candidates, scores)
-    tp_a = int((thresholded & y).sum()); fp_a = int((thresholded & ~y).sum())
-    tp_b = int((accepted & y).sum());    fp_b = int((accepted & ~y).sum())
+    tp_a, fp_a = int((thresholded & y).sum()), int((thresholded & ~y).sum())
+    tp_b, fp_b = int((accepted & y).sum()), int((accepted & ~y).sum())
+    print(check_one_to_one([candidates[i] for i in np.where(thresholded)[0]]))
+    print("   ^ the defect D-11 fixes, measured on the thresholded pairs before")
+    print("     assignment. The same check on the accepted pairs is below.\n")
     print(f"threshold only        : accepted {thresholded.sum():5d}, "
           f"precision {tp_a/(tp_a+fp_a):.4f}, recall {tp_a/len(truth):.4f}")
     print(f"+ one-to-one (D-11)   : accepted {accepted.sum():5d}, "
